@@ -1,0 +1,105 @@
+﻿@page "/edit"
+
+@using BlazorCookieAuth.Data
+@using System.Net.Http
+
+@inject UserService userService
+@inject HttpClient Http
+@inject NavigationManager UriHelper
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
+
+<div class="d-flex justify-content-center">
+  <div class="card" style="width:500px">
+    <div class="card-header color-pattern text-center">
+      <div role="group" class="btn-group-sm nav btn-group">
+        <a data-toggle="tab" href="#tab-eg3-0" class="btn-shadow btn btn-dark show active bg-transparent border-0" data-abc="true">Edit</a>
+        <a data-toggle="tab" href="#tab-eg3-1" class="btn-shadow btn btn-dark show bg-transparent border-0" data-abc="true">Delete</a>
+      </div>
+    </div>
+    <div class="card-body d-flex justify-content-center" style="text-align:center">
+      <div class="tab-content">
+        <div class="tab-pane show active" id="tab-eg3-0" role="tabpanel">
+          <EditForm Model="@newUser" OnValidSubmit="@editUser">
+            <div class="form-group">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <InputText id="name" class="form-control" @bind-Value="newUser.name" placeholder=" New Username"></InputText>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <InputText id="password" class="form-control" @bind-Value="newUser.password" placeholder="New Password"></InputText>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn color-btn-blue">Submit</button>
+          </EditForm>
+        </div>
+        <div class="tab-pane show" id="tab-eg3-1" role="tabpanel">
+          <div >
+            <p>Are you sure you want to delete your account??</p>
+            <button class="btn color-btn-purple" @onclick="deleteUser">Delete Account</button>
+          </div>       
+        </div>
+      </div>
+  
+    </div>
+  </div>
+</div>
+<br />
+<br />
+
+
+@code {
+
+  User CurrentUser = new User();
+  User newUser = new User();
+
+  async Task deleteUser()
+  {
+    User user = await GetUser();
+    userService.deleteUser(user.userId);
+  }
+
+  async Task editUser()
+  {
+    User user = await GetUser();
+    User usertmp = userService.getUserById(user.userId);
+    newUser.userId = user.userId;
+    if (newUser.password == null)
+    {
+      newUser.password = usertmp.password;
+    }
+    else
+    {
+      newUser.name = usertmp.name;
+    }
+    userService.editUser(newUser);
+  }
+
+  async Task<User> GetUser()
+  {
+
+    // We must pass the authentication cookie in server side requests
+    var authToken =
+    HttpContextAccessor.HttpContext.Request.Cookies[".AspNetCore.Cookies"];
+    if (authToken != null)
+    {
+      Http.DefaultRequestHeaders
+      .Add("Cookie", ".AspNetCore.Cookies=" + authToken);
+      // Call the server side controller
+      var url = UriHelper.ToAbsoluteUri("/api/User/GetUser");
+      var result = await Http.GetJsonAsync<User>(url.ToString());
+      // Update the result
+      CurrentUser.name = result.name;
+      CurrentUser.userId = result.userId;
+
+      return CurrentUser;
+    }
+    return null;
+  }
+
+}

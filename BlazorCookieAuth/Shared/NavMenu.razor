@@ -1,0 +1,46 @@
+﻿<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand style-app-name" href="">Mini Note</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+  <ul class="nav flex-column">
+    <li class="nav-item px-3">
+      <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+        <span class="oi oi-home" aria-hidden="true"></span> Home
+      </NavLink>
+    </li>
+    <li class="nav-item dropdown px-3">
+      <NavLink>
+        <span class="nav-link dropdown-toggle" data-toggle="dropdown" id="navbarDropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="oi oi-person"></i> Account</span> 
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" style="color:black" href="signup">Create Account</a>
+          <AuthorizeView Roles="user">
+            <Authorized>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" style="color:black" href="edit">Edit Account</a>
+            </Authorized>
+          </AuthorizeView>
+        </div>      
+      </NavLink>
+    </li>
+    <li class="nav-item px-3">
+      <NavLink class="nav-link" href="notes">
+        <span class="oi oi-clipboard" aria-hidden="true"></span> My Notes
+      </NavLink>
+    </li>
+  </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

@@ -1,0 +1,299 @@
+﻿@page "/notes"
+
+@using BlazorCookieAuth.Components
+@using BlazorCookieAuth.Data
+@using System.Security.Claims;
+@using BlazorCookieAuth.Controllers
+@using System.Net.Http
+@using System.Threading;
+@using System.ComponentModel.DataAnnotations
+
+@inject HttpClient Http
+@inject NavigationManager UriHelper
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject NoteService noteService
+@inject UserService userService
+
+
+<AuthorizeView Roles="user">
+  <Authorized>
+
+    <button type="button" class="btn color-btn-blue" data-toggle="modal" data-target="#createModal">
+      <i class="oi oi-plus" style="font-size:x-large"></i>
+    </button>
+
+    <div class="row" style="padding-left:35%">
+
+      <div class="form-group text-center" style="padding-right:5rem">
+        <label>Filter By Category</label>
+        <select @onchange="CategorySelected" class="form-control">
+          <option value="all">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="form-group text-center">
+        <label>Order By Date</label>
+        <select @onchange="OrderSelected" class="form-control">
+          <option value="ascend">Ascending</option>
+          <option value="descend">Descending</option>
+        </select>
+      </div>
+
+    </div>
+
+
+
+    @if (notes == null)
+    {
+      <p><em>Loading...</em></p>
+    }
+    else
+    {
+      <ul class="list-group list-group-flush" style="width:80%;padding-left:25%">
+
+        @for (int j = 0; j < notes.Count; j++)
+        {
+          int i = j; //για να δουλεψει σωστα η for loop, δε χρειαζεται στη foreach
+          string myclass;
+          string modalId = "exampleModal" + i;
+          string headerId = "exampleModalLabel" + i;
+
+          @if (notes[i].category == "high")
+          {
+            myclass = "border-danger";
+          }
+          else if (notes[i].category == "medium")
+          {
+            myclass = "border-success";
+          }
+          else
+          {
+            myclass = "border-info";
+          }
+
+          //List of Notes
+          <li href="#" class="list-group-item list-group-item-action flex-column align-items-start grow shadow p-3 mb-3 @myclass" style="border:2px groove;border-radius: 50px 20px 20px 20px;">
+            <div class="d-flex w-100 justify-content-end">
+              <small style="color:rgb(5, 39, 103);font-weight:bold">
+                @notes[i].date.ToString("M/d/yyyy")
+              </small>
+            </div>
+            <p class="mb-1" style="font-size:x-large">@notes[i].text</p>
+            <small style="font-style:italic;font-size:medium;font-weight:bold">@notes[i].subtext</small>
+            <div class="btn-group float-right">
+              <button type="button" class="btn btn-hover color-btn-blue" data-toggle="modal" data-target="#@modalId">
+                <i class="oi oi-pencil"></i>
+              </button>
+              <button class="btn btn-hover color-btn-purple" @onclick="() => deleteNote(notes[i].noteId)">
+                <i class="oi oi-check"></i>
+              </button>
+            </div>
+          </li>
+
+
+          <!-- Edit Modal -->
+          <Modal modalId="@modalId.ToString()"
+                 title="Edit Note"
+                 header="color-pattern">
+
+            <EditModal note="@notes[i]"
+                       eventCallback="@(e=>editNote(e, notes[i]))">
+            </EditModal>
+          </Modal>
+        }
+
+
+        <div class="pagination" style="padding-top:2%">
+
+          @for (int i = startPage; i <= totalPages; i++)
+          {
+            var currentPage = i;
+
+            <button class="btn pagebutton @(currentPage == curPage ? "currentpage" : "")" @onclick=@(async () => await updateList(currentPage))>
+              @currentPage
+            </button>
+          }
+          <span class="pagebutton btn btn-link disabled">Page @curPage of @totalPages</span>
+        </div>
+
+      </ul>
+    }
+  </Authorized>
+  <NotAuthorized>
+    <p style="text-align:center; font-size:larger"><em>Log in to start noting :)...</em></p>
+  </NotAuthorized>
+
+</AuthorizeView>
+
+<!--Create Custom Modal---->
+<Modal modalId="createModal"
+       title="Create Note"
+       header="color-pattern">
+
+  <EditModal note="@note"
+             eventCallback="@createNote">
+  </EditModal>
+</Modal>
+
+
+
+
+
+@code {
+
+  List<Note> notes;
+  Note note = new Note();
+  User CurrentUser = new User();
+
+  int totalPages;
+  int curPage;
+  string currCategory;
+  int pagerSize = 4;
+  int startPage = 1;
+
+  async Task<User> GetUser()
+  {
+
+    // We must pass the authentication cookie in server side requests
+    var authToken =
+    HttpContextAccessor.HttpContext.Request.Cookies[".AspNetCore.Cookies"];
+    if (authToken != null)
+    {
+      Http.DefaultRequestHeaders
+      .Add("Cookie", ".AspNetCore.Cookies=" + authToken);
+      // Call the server side controller
+      var url = UriHelper.ToAbsoluteUri("/api/User/GetUser");
+      var result = await Http.GetJsonAsync<User>(url.ToString());
+      // Update the result
+      CurrentUser.name = result.name;
+      CurrentUser.userId = result.userId;
+
+      return CurrentUser;
+    }
+    return null;
+  }
+
+  protected override async Task OnInitializedAsync() //οταν ειναι async αντι για void παντα Task, αλλιως δε δουλευει
+  {
+    curPage = 1;
+    currCategory = "all";
+
+    User user = await GetUser();
+    if (user.isNotNull())
+    {
+      notes = noteService
+        .getAllNotes(user.userId)
+        .Skip((curPage - 1) * pagerSize).Take(pagerSize)
+        .OrderBy(x => x.date).ToList();//βαζω αυτο πρωτο και οχι το getall γιατι θα τα εμφανισει ολα
+      var notesCount = noteService.getAllNotes(user.userId);
+      totalPages = (int)Math.Ceiling(notesCount.Count() / (decimal)pagerSize);
+
+    }
+  }
+
+  public async Task updateList(int currentPage)
+  {
+    User user = await GetUser();
+    if (currCategory.Equals("all"))
+    {
+      notes = noteService.getAllNotes(user.userId)
+                         .Skip((currentPage - 1) * pagerSize).Take(pagerSize)
+                         .OrderBy(x => x.date).ToList();
+    }
+    else
+    {
+       notes = noteService.getAllNotesByCategory(user.userId, currCategory)
+                         .Skip((currentPage - 1) * pagerSize).Take(pagerSize)
+                         .OrderBy(x => x.date).ToList();
+
+      //var notesCount = noteService.getAllNotesByCategory(user.userId, currCategory);
+      //totalPages = (int)Math.Ceiling(notesCount.Count() / (decimal)pagerSize);
+    }
+ 
+   curPage = currentPage;
+  }
+
+  async Task createNote()
+  {
+    User user = await GetUser();
+    note.date = DateTime.Now;
+    noteService.createNote(note, user.userId);
+    //notes = noteService.getAllNotes(user.userId);
+    var notesCount = noteService.getAllNotes(user.userId);
+    totalPages = (int)Math.Ceiling(notesCount.Count() / (decimal)pagerSize);
+  }
+
+  async Task deleteNote(int noteId)
+  {
+    noteService.deleteNote(noteId);
+    User user = await GetUser();
+    notes = noteService.getAllNotes(user.userId); //αλλιως δεν εμφανιζει τις αλλαγες & πρεπει να κανεις refresh manually
+    totalPages = (int)Math.Ceiling(notes.Count() / (decimal)pagerSize);
+  }
+
+  async Task editNote(MouseEventArgs e, Note note)
+  {
+    User user = await GetUser();
+    noteService.editNote(note);
+    //notes = noteService.getAllNotes(user.userId); στα onclick events κανει re-render μονο του οποτε δε χρειαζεται να ξανα καλεσω τη getall
+  }
+
+  protected async Task CategorySelected(ChangeEventArgs e)
+  {
+    User user = await GetUser();
+    currCategory = e.Value.ToString();
+    if (currCategory.Equals("all"))
+    {
+      notes = noteService.getAllNotes(user.userId)
+                         .Skip((curPage - 1) * pagerSize).Take(pagerSize)
+                         .OrderBy(x => x.date).ToList();
+
+      var notesCount = noteService.getAllNotes(user.userId);
+      totalPages = (int)Math.Ceiling(notesCount.Count() / (decimal)pagerSize);
+    }
+    else
+    {
+      notes = noteService.getAllNotesByCategory(user.userId, currCategory)
+                         .Skip((curPage - 1) * pagerSize).Take(pagerSize)
+                         .OrderBy(x => x.date).ToList();
+
+      var notesCount = noteService.getAllNotesByCategory(user.userId, currCategory);
+      totalPages = (int)Math.Ceiling(notesCount.Count() / (decimal)pagerSize);
+    }
+  }
+
+  protected async Task OrderSelected(ChangeEventArgs e)
+  {
+    User user = await GetUser();
+    var currOrder = e.Value.ToString();
+    if (currOrder.Equals("ascend") && !currCategory.isNotNull())
+    {
+      notes = noteService.getAllNotes(user.userId)
+                         .OrderBy(x => x.date).ToList();
+    }
+    else if (currOrder.Equals("ascend") && currCategory.isNotNull())
+    {
+      notes = noteService.getAllNotesByCategory(user.userId, currCategory)
+                         .Skip((curPage - 1) * pagerSize).Take(pagerSize)
+                         .OrderBy(x => x.date).ToList();
+
+    }
+    else if (currOrder.Equals("descend") && !currCategory.isNotNull())
+    {
+      notes = noteService.getAllNotes(user.userId)
+                         .OrderByDescending(x => x.date).ToList();
+    }
+    else
+    {
+      notes = noteService.getAllNotesByCategory(user.userId, currCategory)
+                        .Skip((curPage - 1) * pagerSize).Take(pagerSize)
+                        .OrderByDescending(x => x.date).ToList();
+    }
+
+  }
+
+}
+
+

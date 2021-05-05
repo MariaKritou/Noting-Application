@@ -1,0 +1,72 @@
+﻿@using BlazorCookieAuth.Data
+@inject NoteService noteService
+
+
+
+@*<EditForm Model="@note" OnValidSubmit="@editNote">
+
+  <div class="modal-body">
+    <input id="noteId" value="@note.noteId" />
+    <div class="form-group">
+      <label>Category</label>
+      <InputSelect class="form-control" @bind-Value="@note.category">
+        <option value="">Select Category...</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </InputSelect>
+    </div>
+    <div class="form-group">
+      <label>Text Area</label>
+      <InputTextArea id="text" class="form-control" @bind-Value="@note.text"></InputTextArea>
+    </div>
+    <div class="form-group">
+      <label>Subtext</label>
+      <InputText id="subtext" class="form-control" @bind-Value="@note.subtext"></InputText>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+    <button type="submit" class="btn color-btn-blue">Save changes</button>
+  </div>
+</EditForm>*@
+
+
+
+<form>
+  <div class="modal-body">
+    <input id="noteId" type="hidden" value="@note.noteId" />
+    <div class="form-group">
+      <label>Category</label>
+      <select class="form-control" id="category" @bind="@note.category">
+        <option value="">Select Category...</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Text Area</label>
+      <input id="text" class="form-control" @bind-value="@note.text">
+    </div>
+    <div class="form-group">
+      <label>Subtext</label>
+      <input id="subtext" class="form-control" @bind-value="@note.subtext">
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+    <button type="submit" class="btn color-btn-blue" @onclick="eventCallback">Save changes</button>
+  </div>
+</form>
+
+
+@code {
+  [Parameter]
+  public Note note { get; set; }
+
+  [Parameter]
+  public EventCallback<MouseEventArgs> eventCallback { get; set; }
+}

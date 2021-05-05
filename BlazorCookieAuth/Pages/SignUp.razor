@@ -1,0 +1,51 @@
+﻿@page "/signup"
+
+@using BlazorCookieAuth.Data
+@inject UserService userService
+
+  
+    <div class="d-flex justify-content-center">
+      <div class="card" style="width:500px">
+        <div class="card-header color-pattern text-center">
+          Sign Up
+        </div>
+        <div class="card-body d-flex justify-content-center" style="text-align:center">
+          <EditForm Model="@newUser" OnValidSubmit="@createUser">
+
+            <div class="form-group">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">
+                    <i class="oi oi-person"></i>
+                  </span>
+                </div>
+                <InputText id="name" class="form-control" @bind-Value="newUser.name" placeholder="Username"></InputText>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">
+                    <i class="oi oi-key"></i>
+                  </span>
+                </div>
+                <InputText id="password" class="form-control" @bind-Value="newUser.password" placeholder="Password"></InputText>
+              </div>
+            </div>
+
+            <button type="submit" class="btn color-btn-blue">Submit</button>
+
+          </EditForm>
+        </div>
+      </div>
+    </div>
+   
+    @code {
+
+      private User newUser = new User();
+
+      private void createUser()
+      {
+        userService.createUser(newUser);
+      }
+    }
